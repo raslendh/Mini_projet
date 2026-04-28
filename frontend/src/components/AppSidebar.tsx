@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   GraduationCap,
+  LogOut,
   Newspaper,
   ShieldCheck,
   UserCheck,
@@ -16,9 +17,23 @@ type AppSidebarProps = {
   setActivePage: (page: ActivePage) => void;
   setSelectedStudentId: (id: string | null) => void;
   setIsCreateOpen: (open: boolean) => void;
+  currentUserEmail: string;
+  currentUserRole: string;
+  onLogout: () => void;
 };
 
-function AppSidebar({ activePage, setActivePage, setSelectedStudentId, setIsCreateOpen }: AppSidebarProps) {
+function AppSidebar({
+  activePage,
+  setActivePage,
+  setSelectedStudentId,
+  setIsCreateOpen,
+  currentUserEmail,
+  currentUserRole,
+  onLogout,
+}: AppSidebarProps) {
+  const safeRole = currentUserRole?.trim() || "User";
+  const safeEmail = currentUserEmail?.trim() || "unknown@unicursus.tn";
+
   return (
     <aside className="sidebar">
       <div
@@ -83,6 +98,20 @@ function AppSidebar({ activePage, setActivePage, setSelectedStudentId, setIsCrea
         <a className="nav-item"><UserCheck size={16} />Presences</a>
         <a className="nav-item"><ShieldCheck size={16} />Validations</a>
       </nav>
+
+      <div className="sidebar-account">
+        <div className="sidebar-account-meta">
+          <div className="sidebar-account-avatar">{safeRole.charAt(0)}</div>
+          <div>
+            <strong>{safeRole}</strong>
+            <p>{safeEmail}</p>
+          </div>
+        </div>
+        <button className="ghost-btn sidebar-logout" onClick={onLogout}>
+          <LogOut size={15} />
+          Deconnexion
+        </button>
+      </div>
     </aside>
   );
 }

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import axios from "axios";
 import AppSidebar from "./components/AppSidebar";
 import CreateStudentModal from "./components/CreateStudentModal";
 import DashboardPage from "./components/DashboardPage";
 import DepartmentsPage from "./components/DepartmentsPage";
+import LoginPage from "./components/LoginPage";
 import NewsPage from "./components/NewsPage";
 import SchedulePage from "./components/SchedulePage";
 import StudentDetailsSection from "./components/StudentDetailsSection";
@@ -71,9 +72,21 @@ type SchedulePublication = {
   publishedAt: string;
 };
 
+type AuthUser = {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  is_staff: boolean;
+  is_superuser: boolean;
+};
+
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const directedNewsStorageKey = "unicursus-directed-news";
 const schedulesStorageKey = "unicursus-published-schedules";
+const authStorageKey = "unicursus-auth-session";
 const cursusYears = ["1ere annee", "2eme annee", "3eme annee", "4eme annee", "5eme annee"] as const;
 const departmentCatalog: Record<Student["department"], Omit<Department, "studentsCount">> = {
   Informatique: {
@@ -199,6 +212,32 @@ function mapStudentFromApi(s: Record<string, unknown>): Student {
 }
 
 function App() {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    const raw = window.localStorage.getItem(authStorageKey);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as Partial<AuthUser>;
+      if (!parsed || typeof parsed !== "object") return null;
+      if (typeof parsed.username !== "string") return null;
+      return {
+        id: Number(parsed.id ?? 0),
+        username: parsed.username,
+        email: typeof parsed.email === "string" ? parsed.email : "",
+        first_name: typeof parsed.first_name === "string" ? parsed.first_name : "",
+        last_name: typeof parsed.last_name === "string" ? parsed.last_name : "",
+        role: typeof parsed.role === "string" && parsed.role.trim() ? parsed.role : "User",
+        is_staff: Boolean(parsed.is_staff),
+        is_superuser: Boolean(parsed.is_superuser),
+      };
+    } catch {
+      return null;
+    }
+  });
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginForm, setLoginForm] = useState({
+    identifier: "admin.unicursus",
+    password: "",
+  });
   const [activePage, setActivePage] = useState<"dashboard" | "students" | "departments" | "news" | "schedule">("students");
   const [students, setStudents] = useState<Student[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
@@ -231,6 +270,14 @@ function App() {
   const [scheduleFile, setScheduleFile] = useState<File | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [schedulePublications, setSchedulePublications] = useState<SchedulePublication[]>([]);
+
+  useEffect(() => {
+    if (currentUser) {
+      window.localStorage.setItem(authStorageKey, JSON.stringify(currentUser));
+      return;
+    }
+    window.localStorage.removeItem(authStorageKey);
+  }, [currentUser]);
 
   useEffect(() => {
     async function loadStudents() {
@@ -543,6 +590,60 @@ function App() {
     }
   }
 
+  function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoginError(null);
+    const identifier = loginForm.identifier.trim();
+    const password = loginForm.password.trim();
+
+    if (!identifier || !password) {
+      setLoginError("Identifiant et mot de passe sont obligatoires.");
+      return;
+    }
+  }
+
+  function handleLogout() {
+    setCurrentUser(null);
+    setLoginForm((prev) => ({ ...prev, password: "" }));
+    setSelectedStudentId(null);
+    setActivePage("students");
+    setIsCreateOpen(false);
+    setIsCreateNewsOpen(false);
+  }
+
+  async function submitLogin(event: FormEvent<HTMLFormElement>) {
+    handleLogin(event);
+    const identifier = loginForm.identifier.trim();
+    const password = loginForm.password.trim();
+    if (!identifier || !password) return;
+
+    try {
+      const res = await axios.post(`${apiBaseUrl}/api/auth/login/`, {
+        identifier,
+        password,
+      });
+      setCurrentUser(res.data as AuthUser);
+      setLoginForm((prev) => ({ ...prev, password: "" }));
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.detail) {
+        setLoginError(String(error.response.data.detail));
+        return;
+      }
+      setLoginError("Connexion impossible. Verifiez que le backend est en cours d'execution.");
+    }
+  }
+
+  if (!currentUser) {
+    return (
+      <LoginPage
+        loginError={loginError}
+        loginForm={loginForm}
+        setLoginForm={setLoginForm}
+        onSubmit={submitLogin}
+      />
+    );
+  }
+
   return (
     <div className="app">
       <AppSidebar
@@ -550,6 +651,9 @@ function App() {
         setActivePage={setActivePage}
         setSelectedStudentId={setSelectedStudentId}
         setIsCreateOpen={setIsCreateOpen}
+        currentUserEmail={currentUser.email || currentUser.username}
+        currentUserRole={currentUser.role}
+        onLogout={handleLogout}
       />
 
       <main className="content">
