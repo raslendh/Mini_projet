@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   UserCheck,
   Users,
+  Newspaper,
 } from "lucide-react";
 
 type Student = {
@@ -67,7 +68,25 @@ type Department = {
   formationsCount: number;
 };
 
+type NewsItem = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+};
+
+type SchedulePublication = {
+  id: string;
+  fileName: string;
+  fileContent: string;
+  fileType: "csv" | "pdf";
+  target: "etudiant" | "professeur";
+  publishedAt: string;
+};
+
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+const directedNewsStorageKey = "unicursus-directed-news";
+const schedulesStorageKey = "unicursus-published-schedules";
 
 const initialStudents: Student[] = [
   {
@@ -330,7 +349,7 @@ const initialStudents: Student[] = [
 ];
 
 function App() {
-  const [activePage, setActivePage] = useState<"dashboard" | "students" | "departments">("students");
+  const [activePage, setActivePage] = useState<"dashboard" | "students" | "departments" | "news" | "schedule">("students");
   const [students, setStudents] = useState<Student[]>([]);
   const [_studentsLoading, setStudentsLoading] = useState(true);
   const [_studentsError, setStudentsError] = useState<string | null>(null);
@@ -351,6 +370,18 @@ function App() {
     birthDate: "",
     formation: "",
   });
+
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [isCreateNewsOpen, setIsCreateNewsOpen] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+  const [newsForm, setNewsForm] = useState({ title: "", content: "" });
+  const [directedNews, setDirectedNews] = useState<NewsItem[]>([]);
+  const [directedNewsInput, setDirectedNewsInput] = useState("");
+  const [directedNewsError, setDirectedNewsError] = useState<string | null>(null);
+  const [scheduleTarget, setScheduleTarget] = useState<SchedulePublication["target"]>("etudiant");
+  const [scheduleFile, setScheduleFile] = useState<File | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [schedulePublications, setSchedulePublications] = useState<SchedulePublication[]>([]);
 
   useEffect(() => {
     async function loadStudents() {
@@ -403,6 +434,82 @@ function App() {
 
     loadStudents();
   }, []);
+
+  useEffect(() => {
+    async function loadNews() {
+      try {
+        setNewsError(null);
+        const res = await axios.get(`${apiBaseUrl}/api/news/`);
+        const list = (res.data as any[]).map((n) => {
+          const createdAt =
+            typeof n.created_at === "string" && n.created_at.length > 0
+              ? new Date(n.created_at).toLocaleString("fr-FR")
+              : "";
+          const item: NewsItem = {
+            id: String(n.id),
+            title: n.title,
+            content: n.content,
+            createdAt,
+          };
+          return item;
+        });
+        setNews(list);
+      } catch {
+        setNews([]);
+        setNewsError("Impossible de charger les actualites. Verifie que le backend tourne.");
+      }
+    }
+    loadNews();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(directedNewsStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as NewsItem[];
+      if (!Array.isArray(parsed)) return;
+      const cleaned = parsed.filter(
+        (item) =>
+          item &&
+          typeof item.id === "string" &&
+          typeof item.title === "string" &&
+          typeof item.content === "string" &&
+          typeof item.createdAt === "string",
+      );
+      setDirectedNews(cleaned);
+    } catch {
+      setDirectedNews([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(directedNewsStorageKey, JSON.stringify(directedNews));
+  }, [directedNews]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(schedulesStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as SchedulePublication[];
+      if (!Array.isArray(parsed)) return;
+      const cleaned = parsed.filter(
+        (item) =>
+          item &&
+          typeof item.id === "string" &&
+          typeof item.fileName === "string" &&
+          typeof item.csvContent === "string" &&
+          (item.target === "etudiant" || item.target === "professeur") &&
+          typeof item.publishedAt === "string",
+      );
+      setSchedulePublications(cleaned);
+    } catch {
+      setSchedulePublications([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(schedulesStorageKey, JSON.stringify(schedulePublications));
+  }, [schedulePublications]);
 
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
@@ -543,6 +650,34 @@ function App() {
     setIsCreateOpen(true);
   }
 
+  function openCreateNews() {
+    setNewsError(null);
+    setNewsForm({ title: "", content: "" });
+    setIsCreateNewsOpen(true);
+  }
+
+  async function createNewsItem() {
+    const title = newsForm.title.trim();
+    const content = newsForm.content.trim();
+    if (!title || !content) {
+      setNewsError("Titre et contenu sont obligatoires.");
+      return;
+    }
+    try {
+      const res = await axios.post(`${apiBaseUrl}/api/news/`, { title, content });
+      const n = res.data as any;
+      const createdAt =
+        typeof n.created_at === "string" && n.created_at.length > 0
+          ? new Date(n.created_at).toLocaleString("fr-FR")
+          : new Date().toLocaleString("fr-FR");
+      const item: NewsItem = { id: String(n.id), title: n.title, content: n.content, createdAt };
+      setNews((prev) => [item, ...prev]);
+      setIsCreateNewsOpen(false);
+    } catch {
+      setNewsError("Erreur lors de l'ajout. Verifie que le backend tourne.");
+    }
+  }
+
   async function createStudent() {
     setCreateError(null);
     const name = form.name.trim();
@@ -611,6 +746,77 @@ function App() {
     }
   }
 
+  function publishDirectedNews() {
+    setDirectedNewsError(null);
+    const content = directedNewsInput.trim();
+    if (!content) {
+      setDirectedNewsError("Le contenu de l'actualite dirigee est obligatoire.");
+      return;
+    }
+
+    const newDirectedItem: NewsItem = {
+      id: `dir-${Date.now()}`,
+      title: "Actualite dirigee",
+      content,
+      createdAt: new Date().toLocaleString("fr-FR"),
+    };
+    setDirectedNews((prev) => [newDirectedItem, ...prev]);
+    setDirectedNewsInput("");
+  }
+
+  async function readUploadedFile(file: File): Promise<string> {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(typeof reader.result === "string" ? reader.result : "");
+      };
+      reader.onerror = () => {
+        reject(new Error("Lecture impossible"));
+      };
+      reader.readAsText(file, "utf-8");
+    });
+  }
+
+  async function publishScheduleFile() {
+    setScheduleError(null);
+    if (!scheduleFile) {
+      setScheduleError("Selectionne un fichier CSV ou PDF a publier.");
+      return;
+    }
+
+    const lowerName = scheduleFile.name.toLowerCase();
+    const isCsvName = lowerName.endsWith(".csv");
+    const isPdfName = lowerName.endsWith(".pdf");
+    if (!isCsvName && !isPdfName) {
+      setScheduleError("Le fichier doit etre au format .csv ou .pdf.");
+      return;
+    }
+
+    try {
+      const fileContent = (await readUploadedFile(scheduleFile)).trim();
+      if (!fileContent) {
+        setScheduleError("Le fichier est vide.");
+        return;
+      }
+
+      const publication: SchedulePublication = {
+        id: `schedule-${Date.now()}`,
+        fileName: scheduleFile.name,
+        fileContent,
+        fileType: isPdfName ? "pdf" : "csv",
+        target: scheduleTarget,
+        publishedAt: new Date().toLocaleString("fr-FR"),
+      };
+
+      setSchedulePublications((prev) => [publication, ...prev]);
+      setScheduleFile(null);
+      const fileInput = document.getElementById("schedule-csv-input") as HTMLInputElement | null;
+      if (fileInput) fileInput.value = "";
+    } catch {
+      setScheduleError("Impossible de lire le fichier.");
+    }
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -658,6 +864,24 @@ function App() {
             onClick={() => setActivePage("departments")}
           >
             <Building2 size={16} />Departements
+          </a>
+          <a
+            className={`nav-item ${activePage === "news" ? "active" : ""}`}
+            onClick={() => {
+              setActivePage("news");
+              setSelectedStudentId(null);
+            }}
+          >
+            <Newspaper size={16} />Actualites
+          </a>
+          <a
+            className={`nav-item ${activePage === "schedule" ? "active" : ""}`}
+            onClick={() => {
+              setActivePage("schedule");
+              setSelectedStudentId(null);
+            }}
+          >
+            <ClipboardList size={16} />Emploi du temps
           </a>
           <a className="nav-item"><BookOpen size={16} />Formations</a>
           <a className="nav-item"><ClipboardList size={16} />Modules</a>
@@ -835,6 +1059,162 @@ function App() {
                   </div>
                 </article>
               ))}
+            </section>
+          </>
+        ) : activePage === "news" ? (
+          <>
+            <header className="section-header">
+              <div>
+                <h1>Actualites</h1>
+                <p>Publier et consulter les actualites</p>
+              </div>
+              <button className="primary-btn" onClick={openCreateNews}>
+                <Plus size={16} />
+                Nouveau
+              </button>
+            </header>
+
+            {newsError ? <div className="form-error">{newsError}</div> : null}
+            {directedNewsError ? <div className="form-error">{directedNewsError}</div> : null}
+            {scheduleError ? <div className="form-error">{scheduleError}</div> : null}
+
+            <section className="directed-news-editor">
+              <h2>Actualites dirigees</h2>
+              <p>Tape un message ici puis publie-le pour qu'il soit visible sur la page Etudiants.</p>
+              <textarea
+                value={directedNewsInput}
+                onChange={(e) => setDirectedNewsInput(e.target.value)}
+                rows={4}
+                placeholder="Ex: Reunion des etudiants de 3eme annee demain a 10h."
+              />
+              <div className="directed-news-actions">
+                <button className="primary-btn" onClick={publishDirectedNews}>
+                  Publier pour les etudiants
+                </button>
+              </div>
+            </section>
+
+            <section className="news-grid">
+              {news.length === 0 ? (
+                <div className="empty">Aucune actualite pour le moment.</div>
+              ) : (
+                news.map((item) => (
+                  <article className="news-card" key={item.id}>
+                    <div className="news-head">
+                      <strong>{item.title}</strong>
+                      <small>{item.createdAt}</small>
+                    </div>
+                    <p>{item.content}</p>
+                  </article>
+                ))
+              )}
+            </section>
+
+            {isCreateNewsOpen ? (
+              <div className="modal-overlay" role="dialog" aria-modal="true">
+                <div className="modal">
+                  <div className="modal-head">
+                    <div>
+                      <h2>Nouvelle actualite</h2>
+                      <p>Ajouter une actualite</p>
+                    </div>
+                    <button className="icon-btn" onClick={() => setIsCreateNewsOpen(false)} aria-label="Fermer">
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  <div className="form-grid form-grid-1">
+                    <label>
+                      <span>Titre</span>
+                      <input
+                        value={newsForm.title}
+                        onChange={(e) => setNewsForm((p) => ({ ...p, title: e.target.value }))}
+                      />
+                    </label>
+                    <label>
+                      <span>Contenu</span>
+                      <textarea
+                        value={newsForm.content}
+                        onChange={(e) => setNewsForm((p) => ({ ...p, content: e.target.value }))}
+                        rows={6}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button className="ghost-btn" onClick={() => setIsCreateNewsOpen(false)}>
+                      Annuler
+                    </button>
+                    <button className="primary-btn" onClick={createNewsItem}>
+                      Publier
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : activePage === "schedule" ? (
+          <>
+            <header className="section-header">
+              <div>
+                <h1>Emploi du temps</h1>
+                <p>Importer et publier des fichiers CSV pour les etudiants ou les professeurs</p>
+              </div>
+            </header>
+
+            {scheduleError ? <div className="form-error">{scheduleError}</div> : null}
+
+            <section className="schedule-editor">
+              <h2>Emploi du temps (CSV)</h2>
+              <p>Importer un fichier CSV ou PDF puis publier pour les etudiants ou les professeurs.</p>
+              <div className="schedule-form-row">
+                <label className="schedule-file-field" htmlFor="schedule-csv-input">
+                  <span>Fichier CSV ou PDF</span>
+                  <input
+                    id="schedule-csv-input"
+                    type="file"
+                    accept=".csv,text/csv,.pdf,application/pdf"
+                    onChange={(e) => setScheduleFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label className="schedule-target-field">
+                  <span>Cible</span>
+                  <select
+                    value={scheduleTarget}
+                    onChange={(e) => setScheduleTarget(e.target.value as SchedulePublication["target"])}
+                  >
+                    <option value="etudiant">Etudiant</option>
+                    <option value="professeur">Professeur</option>
+                  </select>
+                </label>
+              </div>
+              {scheduleFile ? <small className="schedule-file-name">Fichier choisi: {scheduleFile.name}</small> : null}
+              <div className="directed-news-actions">
+                <button className="primary-btn" onClick={publishScheduleFile}>
+                  Publier l'emploi du temps
+                </button>
+              </div>
+            </section>
+
+            <section className="schedule-publications">
+              <h2>Publications emploi du temps</h2>
+              {schedulePublications.length === 0 ? (
+                <div className="empty">Aucun fichier CSV/PDF publie pour le moment.</div>
+              ) : (
+                <ul className="schedule-publications-list">
+                  {schedulePublications.slice(0, 10).map((item) => (
+                    <li key={item.id}>
+                      <div className="schedule-publication-head">
+                        <strong>{item.fileName}</strong>
+                        <span className="tag">{item.target === "etudiant" ? "Etudiant" : "Professeur"}</span>
+                      </div>
+                      <small>
+                        Type: {item.fileType.toUpperCase()} • Publie le {item.publishedAt}
+                      </small>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           </>
         ) : !selectedStudent ? (

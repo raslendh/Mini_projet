@@ -2,8 +2,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import viewsets
 
-from core.models import Student
-from core.serializers import StudentSerializer
+from core.models import NewsItem, Student
+from core.serializers import NewsItemSerializer, StudentSerializer
 
 @api_view(["GET"])
 def dashboard_data(request):
@@ -34,3 +34,8 @@ def dashboard_data(request):
 class StudentViewSet(viewsets.ModelViewSet):
     queryset = Student.objects.all().order_by("-created_at")
     serializer_class = StudentSerializer
+
+
+class NewsItemViewSet(viewsets.ModelViewSet):
+    queryset = NewsItem.objects.all().order_by("-created_at")
+    serializer_class = NewsItemSerializer

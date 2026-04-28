@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from core.models import Student
+from core.models import NewsItem
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -24,4 +25,12 @@ class StudentSerializer(serializers.ModelSerializer):
             "formation",
             "inscription_date",
         ]
+
+
+class NewsItemSerializer(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = NewsItem
+        fields = ["id", "title", "content", "created_at"]
 
