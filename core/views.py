@@ -1,9 +1,11 @@
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import viewsets
 
 from core.models import NewsItem, Student
-from core.serializers import NewsItemSerializer, StudentSerializer
+from core.serializers import AuthUserSerializer, LoginSerializer, NewsItemSerializer, StudentSerializer
 
 @api_view(["GET"])
 def dashboard_data(request):
@@ -29,6 +31,29 @@ def dashboard_data(request):
         ],
     }
     return Response(payload)
+
+
+@api_view(["POST"])
+def login_view(request):
+    serializer = LoginSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    identifier = serializer.validated_data["identifier"].strip()
+    password = serializer.validated_data["password"]
+
+    username = identifier
+    matched_user = User.objects.filter(email__iexact=identifier).first()
+    if matched_user:
+        username = matched_user.username
+
+    user = authenticate(username=username, password=password)
+    if user is None:
+        return Response(
+            {"detail": "Identifiant ou mot de passe incorrect."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return Response(AuthUserSerializer(user).data)
 
 
 class StudentViewSet(viewsets.ModelViewSet):
