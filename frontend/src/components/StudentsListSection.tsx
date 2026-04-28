@@ -15,10 +15,12 @@ type StudentsListSectionProps = {
   filteredStudents: StudentListItem[];
   query: string;
   setQuery: (value: string) => void;
-  activeFilter: "Tous" | "Informatique" | "Physique" | "Mathematiques";
-  setActiveFilter: (value: "Tous" | "Informatique" | "Physique" | "Mathematiques") => void;
+  activeFilter: "Tous" | string;
+  setActiveFilter: (value: "Tous" | string) => void;
+  availableDepartments: string[];
   openCreate: () => void;
   setSelectedStudentId: (id: string) => void;
+  loading: boolean;
 };
 
 function StudentsListSection({
@@ -27,15 +29,17 @@ function StudentsListSection({
   setQuery,
   activeFilter,
   setActiveFilter,
+  availableDepartments,
   openCreate,
   setSelectedStudentId,
+  loading,
 }: StudentsListSectionProps) {
   return (
     <>
       <header className="section-header">
         <div>
           <h1>Etudiants</h1>
-          <p>{filteredStudents.length} etudiants inscrits</p>
+          <p>{loading ? "Chargement..." : `${filteredStudents.length} etudiants inscrits`}</p>
         </div>
         <button className="primary-btn" onClick={openCreate}>
           <Plus size={16} />
@@ -55,7 +59,7 @@ function StudentsListSection({
             />
           </label>
           <div className="filters">
-            {(["Tous", "Informatique", "Physique", "Mathematiques"] as const).map((filter) => (
+            {(["Tous", ...availableDepartments] as const).map((filter) => (
               <button
                 key={filter}
                 className={activeFilter === filter ? "is-active" : ""}
@@ -103,6 +107,13 @@ function StudentsListSection({
                 </td>
               </tr>
             ))}
+            {!loading && filteredStudents.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="empty">
+                  Aucun etudiant trouve.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </section>
