@@ -1,26 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
-  ArrowLeft,
-  BookOpen,
-  Building2,
-  ClipboardList,
-  X,
-  Eye,
-  GraduationCap,
-  GraduationCap as DiplomaIcon,
-  Layers,
-  BadgeInfo,
-  Mail,
-  MapPin,
-  Phone,
-  Plus,
-  Search,
-  ShieldCheck,
-  UserCheck,
   Users,
-  Newspaper,
 } from "lucide-react";
+import AppSidebar from "./components/AppSidebar";
+import CreateStudentModal from "./components/CreateStudentModal";
+import DashboardPage from "./components/DashboardPage";
+import DepartmentsPage from "./components/DepartmentsPage";
+import NewsPage from "./components/NewsPage";
+import SchedulePage from "./components/SchedulePage";
+import StudentDetailsSection from "./components/StudentDetailsSection";
+import StudentsListSection from "./components/StudentsListSection";
 
 type Student = {
   id: string;
@@ -87,6 +77,20 @@ type SchedulePublication = {
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const directedNewsStorageKey = "unicursus-directed-news";
 const schedulesStorageKey = "unicursus-published-schedules";
+
+function mergeStudentsWithDemo(apiStudents: Student[]): Student[] {
+  const byId = new Map<string, Student>();
+  for (const student of apiStudents) {
+    byId.set(student.id, student);
+  }
+  for (const demoStudent of initialStudents) {
+    // Keep API data when same id exists, add missing demo entries.
+    if (!byId.has(demoStudent.id)) {
+      byId.set(demoStudent.id, demoStudent);
+    }
+  }
+  return Array.from(byId.values());
+}
 
 const initialStudents: Student[] = [
   {
@@ -346,6 +350,102 @@ const initialStudents: Student[] = [
       { module: "Electricite", code: "PHY130", exam: 12, td: 10, tp: 0, average: 11.2, status: "Normale" },
     ],
   },
+  {
+    id: "etu-2022-407",
+    name: "Nour El Houda",
+    email: "n.houda@univ.dz",
+    matricule: "ETU-2022-407",
+    department: "Chimie",
+    year: "3eme",
+    average: 13.7,
+    status: "Actif",
+    phone: "0552 77 18 04",
+    city: "Bejaia",
+    birthDate: "05/10/2003",
+    formation: "Licence Chimie",
+    inscriptionDate: "12/09/2022",
+    attendanceRate: 84,
+    attendance: { present: 8, absent: 1, late: 0, justified: 0 },
+    attendanceHistory: [
+      { module: "Chimie Organique", code: "CHI 301", type: "Cours", date: "18/04/2026", status: "Present" },
+      { module: "Analyse Chimique", code: "CHI 315", type: "TP", date: "21/04/2026", status: "Present" },
+    ],
+    cursus: [
+      { yearLabel: "1ere annee", state: "done", passageLabel: "Passage en 2eme annee", grade: 12.9, credits: "60/60 credits" },
+      { yearLabel: "2eme annee", state: "done", passageLabel: "Passage en 3eme annee", grade: 13.5, credits: "60/60 credits" },
+      { yearLabel: "3eme annee", state: "active", passageLabel: "en cours" },
+      { yearLabel: "4eme annee", state: "pending" },
+      { yearLabel: "5eme annee", state: "pending" },
+    ],
+    results: [
+      { module: "Chimie Organique", code: "CHI301", exam: 14, td: 13, tp: 0, average: 13.6, status: "Normale" },
+      { module: "Analyse Chimique", code: "CHI315", exam: 13, td: 14, tp: 15, average: 13.8, status: "Normale" },
+    ],
+  },
+  {
+    id: "etu-2020-278",
+    name: "Riad Merabet",
+    email: "r.merabet@univ.dz",
+    matricule: "ETU-2020-278",
+    department: "Genie Civil",
+    year: "5eme",
+    average: 15.3,
+    status: "Soutenance",
+    phone: "0668 40 77 21",
+    city: "Batna",
+    birthDate: "14/02/2001",
+    formation: "Master Genie Civil",
+    inscriptionDate: "16/09/2020",
+    attendanceRate: 89,
+    attendance: { present: 10, absent: 0, late: 1, justified: 0 },
+    attendanceHistory: [
+      { module: "Beton Arme", code: "GCV 520", type: "Cours", date: "17/04/2026", status: "Present" },
+      { module: "Hydraulique", code: "GCV 525", type: "TD", date: "22/04/2026", status: "Retard" },
+    ],
+    cursus: [
+      { yearLabel: "1ere annee", state: "done", passageLabel: "Passage en 2eme annee", grade: 13.8, credits: "60/60 credits" },
+      { yearLabel: "2eme annee", state: "done", passageLabel: "Passage en 3eme annee", grade: 14.1, credits: "60/60 credits" },
+      { yearLabel: "3eme annee", state: "done", passageLabel: "Passage en 4eme annee", grade: 14.7, credits: "60/60 credits" },
+      { yearLabel: "4eme annee", state: "done", passageLabel: "Passage en 5eme annee", grade: 15.0, credits: "60/60 credits" },
+      { yearLabel: "5eme annee", state: "active", passageLabel: "en cours" },
+    ],
+    results: [
+      { module: "Beton Arme", code: "GCV520", exam: 16, td: 15, tp: 0, average: 15.6, status: "Normale" },
+      { module: "Hydraulique", code: "GCV525", exam: 14, td: 15, tp: 0, average: 14.4, status: "Normale" },
+    ],
+  },
+  {
+    id: "etu-2023-166",
+    name: "Imane Zerrouki",
+    email: "i.zerrouki@univ.dz",
+    matricule: "ETU-2023-166",
+    department: "Electronique",
+    year: "2eme",
+    average: 12.4,
+    status: "Actif",
+    phone: "0771 53 29 60",
+    city: "Mostaganem",
+    birthDate: "09/09/2004",
+    formation: "Licence Electronique",
+    inscriptionDate: "15/09/2023",
+    attendanceRate: 79,
+    attendance: { present: 7, absent: 1, late: 1, justified: 0 },
+    attendanceHistory: [
+      { module: "Circuits Electriques", code: "ELE 210", type: "Cours", date: "19/04/2026", status: "Present" },
+      { module: "Electronique Numerique", code: "ELE 220", type: "TP", date: "23/04/2026", status: "Absent" },
+    ],
+    cursus: [
+      { yearLabel: "1ere annee", state: "done", passageLabel: "Passage en 2eme annee", grade: 12.2, credits: "60/60 credits" },
+      { yearLabel: "2eme annee", state: "active", passageLabel: "en cours" },
+      { yearLabel: "3eme annee", state: "pending" },
+      { yearLabel: "4eme annee", state: "pending" },
+      { yearLabel: "5eme annee", state: "pending" },
+    ],
+    results: [
+      { module: "Circuits Electriques", code: "ELE210", exam: 13, td: 12, tp: 0, average: 12.6, status: "Normale" },
+      { module: "Electronique Numerique", code: "ELE220", exam: 10, td: 11, tp: 12, average: 10.8, status: "Rattrapage" },
+    ],
+  },
 ];
 
 function App() {
@@ -423,7 +523,7 @@ function App() {
           };
           return student;
         });
-        setStudents(list.length ? list : initialStudents);
+        setStudents(list.length ? mergeStudentsWithDemo(list) : initialStudents);
       } catch {
         setStudents(initialStudents);
         setStudentsError("Impossible de charger depuis l'API. Donnees demo affichees.");
@@ -819,727 +919,76 @@ function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
-        <div
-          className="brand brand-clickable"
-          role="button"
-          tabIndex={0}
-          onClick={() => {
-            setActivePage("dashboard");
-            setSelectedStudentId(null);
-            setIsCreateOpen(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              setActivePage("dashboard");
-              setSelectedStudentId(null);
-              setIsCreateOpen(false);
-            }
-          }}
-        >
-          <GraduationCap size={20} />
-          <div>
-            <strong>UniCursus</strong>
-            <p>Gestion Universitaire</p>
-          </div>
-        </div>
-        <nav>
-          <a
-            className={`nav-item ${activePage === "dashboard" ? "active" : ""}`}
-            onClick={() => {
-              setActivePage("dashboard");
-              setSelectedStudentId(null);
-            }}
-          >
-            <BookOpen size={16} />Tableau de bord
-          </a>
-          <a
-            className={`nav-item ${activePage === "students" ? "active" : ""}`}
-            onClick={() => setActivePage("students")}
-          >
-            <Users size={16} />Etudiants
-          </a>
-          <a
-            className={`nav-item ${activePage === "departments" ? "active" : ""}`}
-            onClick={() => setActivePage("departments")}
-          >
-            <Building2 size={16} />Departements
-          </a>
-          <a
-            className={`nav-item ${activePage === "news" ? "active" : ""}`}
-            onClick={() => {
-              setActivePage("news");
-              setSelectedStudentId(null);
-            }}
-          >
-            <Newspaper size={16} />Actualites
-          </a>
-          <a
-            className={`nav-item ${activePage === "schedule" ? "active" : ""}`}
-            onClick={() => {
-              setActivePage("schedule");
-              setSelectedStudentId(null);
-            }}
-          >
-            <ClipboardList size={16} />Emploi du temps
-          </a>
-          <a className="nav-item"><BookOpen size={16} />Formations</a>
-          <a className="nav-item"><ClipboardList size={16} />Modules</a>
-          <a className="nav-item"><UserCheck size={16} />Presences</a>
-          <a className="nav-item"><ShieldCheck size={16} />Validations</a>
-        </nav>
-      </aside>
+      <AppSidebar
+        activePage={activePage}
+        setActivePage={setActivePage}
+        setSelectedStudentId={setSelectedStudentId}
+        setIsCreateOpen={setIsCreateOpen}
+      />
 
       <main className="content">
         {activePage === "dashboard" ? (
-          <>
-            <header className="section-header">
-              <div>
-                <h1>Tableau de bord</h1>
-                <p>Vue d&apos;ensemble du cursus universitaire</p>
-              </div>
-            </header>
-            <section className="dashboard-kpis">
-              <article className="kpi-card">
-                <div className="kpi-top">
-                  <h3>Etudiants</h3>
-                  <span className="kpi-icon">
-                    <Users size={16} />
-                  </span>
-                </div>
-                <strong>{students.length}</strong>
-                <span className="kpi-sub">{activeStudents} actifs</span>
-              </article>
-              <article className="kpi-card">
-                <div className="kpi-top">
-                  <h3>Departements</h3>
-                  <span className="kpi-icon">
-                    <Building2 size={16} />
-                  </span>
-                </div>
-                <strong>{totalDepartments}</strong>
-              </article>
-              <article className="kpi-card">
-                <div className="kpi-top">
-                  <h3>Modules</h3>
-                  <span className="kpi-icon">
-                    <Layers size={16} />
-                  </span>
-                </div>
-                <strong>14</strong>
-              </article>
-              <article className="kpi-card">
-                <div className="kpi-top">
-                  <h3>Diplomes</h3>
-                  <span className="kpi-icon">
-                    <DiplomaIcon size={16} />
-                  </span>
-                </div>
-                <strong>{graduates}</strong>
-              </article>
-            </section>
-
-            <section className="dashboard-grid">
-              <article className="panel">
-                <div className="panel-head">
-                  <h2>Etudiants recents</h2>
-                  <button className="link-btn" onClick={() => setActivePage("students")}>
-                    Voir tous →
-                  </button>
-                </div>
-                <ul className="recent-list">
-                  {students.slice(0, 5).map((student) => (
-                    <li key={student.id}>
-                      <div className="recent-left">
-                        <div className="avatar">{student.name.charAt(0)}</div>
-                        <div>
-                          <strong>{student.name}</strong>
-                          <small>{student.department}</small>
-                        </div>
-                      </div>
-                      <div className="recent-right">
-                        <small>{student.year} annee</small>
-                        <span className={`tag ${student.status.toLowerCase()}`}>{student.status}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-
-              <article className="panel">
-                <div className="panel-head">
-                  <h2>Departements</h2>
-                  <button
-                    className="link-btn"
-                    onClick={() => {
-                      setActivePage("departments");
-                      setSelectedStudentId(null);
-                    }}
-                  >
-                    Voir →
-                  </button>
-                </div>
-                <ul className="dept-list">
-                  {departmentsSummary.map((dept) => (
-                    <li
-                      key={dept.name}
-                      className="is-clickable"
-                      onClick={() => {
-                        setActivePage("departments");
-                        setSelectedStudentId(null);
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          setActivePage("departments");
-                          setSelectedStudentId(null);
-                        }
-                      }}
-                    >
-                      <div className="dept-row">
-                        <strong>{dept.name}</strong>
-                        <span className="dept-score">{dept.score}</span>
-                      </div>
-                      <small>Chef: {dept.head}</small>
-                      <div className="progress">
-                        <div style={{ width: `${dept.progress}%` }} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            </section>
-          </>
+          <DashboardPage
+            studentsCount={students.length}
+            activeStudents={activeStudents}
+            totalDepartments={totalDepartments}
+            graduates={graduates}
+            students={students}
+            departmentsSummary={departmentsSummary}
+            setActivePage={setActivePage}
+            setSelectedStudentId={setSelectedStudentId}
+          />
         ) : activePage === "departments" ? (
-          <>
-            <header className="section-header">
-              <div>
-                <h1>Departements</h1>
-                <p>Gestion des departements et chefs de departement</p>
-              </div>
-            </header>
-
-            <section className="dept-grid-page">
-              {departmentsData.map((dept) => (
-                <article className="dept-card" key={dept.id}>
-                  <div className="dept-top">
-                    <div className="dept-icon">
-                      <Building2 size={16} />
-                    </div>
-                    <div className="dept-title">
-                      <strong>{dept.name}</strong>
-                      <p>{dept.description}</p>
-                    </div>
-                  </div>
-
-                  <div className="dept-head-label">Chef de departement</div>
-                  <div className="dept-head">
-                    <div className="dept-head-avatar">
-                      <BadgeInfo size={16} />
-                    </div>
-                    <div className="dept-head-info">
-                      <strong>{dept.headName}</strong>
-                      <div className="dept-head-meta">
-                        <span><Mail size={13} /> {dept.headEmail}</span>
-                        <span><Phone size={13} /> {dept.headPhone}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="dept-stats">
-                    <span className="dept-stat">
-                      <Users size={14} />
-                      <b>{dept.studentsCount}</b> etudiants
-                    </span>
-                    <span className="dept-stat">
-                      <Layers size={14} />
-                      <b>{dept.formationsCount}</b> formations
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </section>
-          </>
+          <DepartmentsPage departmentsData={departmentsData} />
         ) : activePage === "news" ? (
-          <>
-            <header className="section-header">
-              <div>
-                <h1>Actualites</h1>
-                <p>Publier et consulter les actualites</p>
-              </div>
-              <button className="primary-btn" onClick={openCreateNews}>
-                <Plus size={16} />
-                Nouveau
-              </button>
-            </header>
-
-            {newsError ? <div className="form-error">{newsError}</div> : null}
-            {directedNewsError ? <div className="form-error">{directedNewsError}</div> : null}
-            {scheduleError ? <div className="form-error">{scheduleError}</div> : null}
-
-            <section className="directed-news-editor">
-              <h2>Actualites dirigees</h2>
-              <p>Tape un message ici puis publie-le pour qu'il soit visible sur la page Etudiants.</p>
-              <textarea
-                value={directedNewsInput}
-                onChange={(e) => setDirectedNewsInput(e.target.value)}
-                rows={4}
-                placeholder="Ex: Reunion des etudiants de 3eme annee demain a 10h."
-              />
-              <div className="directed-news-actions">
-                <button className="primary-btn" onClick={publishDirectedNews}>
-                  Publier pour les etudiants
-                </button>
-              </div>
-            </section>
-
-            <section className="news-grid">
-              {news.length === 0 ? (
-                <div className="empty">Aucune actualite pour le moment.</div>
-              ) : (
-                news.map((item) => (
-                  <article className="news-card" key={item.id}>
-                    <div className="news-head">
-                      <strong>{item.title}</strong>
-                      <small>{item.createdAt}</small>
-                    </div>
-                    <p>{item.content}</p>
-                  </article>
-                ))
-              )}
-            </section>
-
-            {isCreateNewsOpen ? (
-              <div className="modal-overlay" role="dialog" aria-modal="true">
-                <div className="modal">
-                  <div className="modal-head">
-                    <div>
-                      <h2>Nouvelle actualite</h2>
-                      <p>Ajouter une actualite</p>
-                    </div>
-                    <button className="icon-btn" onClick={() => setIsCreateNewsOpen(false)} aria-label="Fermer">
-                      <X size={16} />
-                    </button>
-                  </div>
-
-                  <div className="form-grid form-grid-1">
-                    <label>
-                      <span>Titre</span>
-                      <input
-                        value={newsForm.title}
-                        onChange={(e) => setNewsForm((p) => ({ ...p, title: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      <span>Contenu</span>
-                      <textarea
-                        value={newsForm.content}
-                        onChange={(e) => setNewsForm((p) => ({ ...p, content: e.target.value }))}
-                        rows={6}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="modal-actions">
-                    <button className="ghost-btn" onClick={() => setIsCreateNewsOpen(false)}>
-                      Annuler
-                    </button>
-                    <button className="primary-btn" onClick={createNewsItem}>
-                      Publier
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </>
+          <NewsPage
+            news={news}
+            newsError={newsError}
+            directedNewsError={directedNewsError}
+            scheduleError={scheduleError}
+            directedNewsInput={directedNewsInput}
+            setDirectedNewsInput={setDirectedNewsInput}
+            publishDirectedNews={publishDirectedNews}
+            openCreateNews={openCreateNews}
+            isCreateNewsOpen={isCreateNewsOpen}
+            setIsCreateNewsOpen={setIsCreateNewsOpen}
+            newsForm={newsForm}
+            setNewsForm={setNewsForm}
+            createNewsItem={createNewsItem}
+          />
         ) : activePage === "schedule" ? (
-          <>
-            <header className="section-header">
-              <div>
-                <h1>Emploi du temps</h1>
-                <p>Importer et publier des fichiers CSV pour les etudiants ou les professeurs</p>
-              </div>
-            </header>
-
-            {scheduleError ? <div className="form-error">{scheduleError}</div> : null}
-
-            <section className="schedule-editor">
-              <h2>Emploi du temps (CSV)</h2>
-              <p>Importer un fichier CSV ou PDF puis publier pour les etudiants ou les professeurs.</p>
-              <div className="schedule-form-row">
-                <label className="schedule-file-field" htmlFor="schedule-csv-input">
-                  <span>Fichier CSV ou PDF</span>
-                  <input
-                    id="schedule-csv-input"
-                    type="file"
-                    accept=".csv,text/csv,.pdf,application/pdf"
-                    onChange={(e) => setScheduleFile(e.target.files?.[0] ?? null)}
-                  />
-                </label>
-                <label className="schedule-target-field">
-                  <span>Cible</span>
-                  <select
-                    value={scheduleTarget}
-                    onChange={(e) => setScheduleTarget(e.target.value as SchedulePublication["target"])}
-                  >
-                    <option value="etudiant">Etudiant</option>
-                    <option value="professeur">Professeur</option>
-                  </select>
-                </label>
-              </div>
-              {scheduleFile ? <small className="schedule-file-name">Fichier choisi: {scheduleFile.name}</small> : null}
-              <div className="directed-news-actions">
-                <button className="primary-btn" onClick={publishScheduleFile}>
-                  Publier l'emploi du temps
-                </button>
-              </div>
-            </section>
-
-            <section className="schedule-publications">
-              <h2>Publications emploi du temps</h2>
-              {schedulePublications.length === 0 ? (
-                <div className="empty">Aucun fichier CSV/PDF publie pour le moment.</div>
-              ) : (
-                <ul className="schedule-publications-list">
-                  {schedulePublications.slice(0, 10).map((item) => (
-                    <li key={item.id}>
-                      <div className="schedule-publication-head">
-                        <strong>{item.fileName}</strong>
-                        <span className="tag">{item.target === "etudiant" ? "Etudiant" : "Professeur"}</span>
-                      </div>
-                      <small>
-                        Type: {item.fileType.toUpperCase()} • Publie le {item.publishedAt}
-                      </small>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
+          <SchedulePage
+            scheduleError={scheduleError}
+            scheduleTarget={scheduleTarget}
+            setScheduleTarget={setScheduleTarget}
+            setScheduleFile={setScheduleFile}
+            scheduleFile={scheduleFile}
+            publishScheduleFile={publishScheduleFile}
+            schedulePublications={schedulePublications}
+          />
         ) : !selectedStudent ? (
-          <>
-            <header className="section-header">
-              <div>
-                <h1>Etudiants</h1>
-                <p>{filteredStudents.length} etudiants inscrits</p>
-              </div>
-              <button className="primary-btn" onClick={openCreate}>
-                <Plus size={16} />
-                Nouveau
-              </button>
-            </header>
-
-            <section className="students-panel">
-              <div className="toolbar">
-                <label className="search-box">
-                  <Search size={15} />
-                  <input
-                    type="text"
-                    placeholder="Rechercher..."
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                </label>
-                <div className="filters">
-                  {(["Tous", "Informatique", "Physique", "Mathematiques"] as const).map((filter) => (
-                    <button
-                      key={filter}
-                      className={activeFilter === filter ? "is-active" : ""}
-                      onClick={() => setActiveFilter(filter)}
-                    >
-                      {filter}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th>Etudiant</th>
-                    <th>Matricule</th>
-                    <th>Departement</th>
-                    <th>Annee</th>
-                    <th>Moyenne</th>
-                    <th>Statut</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStudents.map((student) => (
-                    <tr key={student.id}>
-                      <td>
-                        <div className="student-cell">
-                          <div className="avatar">{student.name.charAt(0)}</div>
-                          <div>
-                            <strong>{student.name}</strong>
-                            <small>{student.email}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>{student.matricule}</td>
-                      <td>{student.department}</td>
-                      <td>{student.year}</td>
-                      <td className={`grade ${student.average < 10 ? "is-low" : ""}`}>
-                        {student.average.toFixed(1)}
-                      </td>
-                      <td><span className={`tag ${student.status.toLowerCase()}`}>{student.status}</span></td>
-                      <td>
-                        <button className="icon-btn" onClick={() => setSelectedStudentId(student.id)}>
-                          <Eye size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          </>
+          <StudentsListSection
+            filteredStudents={filteredStudents}
+            query={query}
+            setQuery={setQuery}
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
+            openCreate={openCreate}
+            setSelectedStudentId={setSelectedStudentId}
+          />
         ) : (
-          <>
-            <header className="section-header">
-              <div className="details-title">
-                <button className="icon-btn" onClick={() => setSelectedStudentId(null)}>
-                  <ArrowLeft size={16} />
-                </button>
-                <div>
-                  <h1>{selectedStudent.name}</h1>
-                  <p>{selectedStudent.matricule}</p>
-                </div>
-              </div>
-              <span className="tag actif">{selectedStudent.status}</span>
-            </header>
-
-            <section className="details-grid">
-              <article className="card-box">
-                <h3>Dossier Personnel</h3>
-                <ul className="personal-list">
-                  <li><Users size={14} /> Ne(e) le {selectedStudent.birthDate}</li>
-                  <li><Mail size={14} /> {selectedStudent.email}</li>
-                  <li><Phone size={14} /> {selectedStudent.phone}</li>
-                  <li><MapPin size={14} /> {selectedStudent.city}</li>
-                </ul>
-                <dl className="meta-grid">
-                  <div className="meta-row">
-                    <dt>Formation</dt>
-                    <dd>{selectedStudent.formation}</dd>
-                  </div>
-                  <div className="meta-row">
-                    <dt>Departement</dt>
-                    <dd>{selectedStudent.department}</dd>
-                  </div>
-                  <div className="meta-row">
-                    <dt>Annee</dt>
-                    <dd>{selectedStudent.year} annee</dd>
-                  </div>
-                  <div className="meta-row">
-                    <dt>Inscription</dt>
-                    <dd>{selectedStudent.inscriptionDate}</dd>
-                  </div>
-                  <div className="meta-row">
-                    <dt>Moyenne generale</dt>
-                    <dd className={`meta-accent ${selectedStudent.average < 10 ? "is-low" : ""}`}>
-                      {selectedStudent.average.toFixed(2)}
-                    </dd>
-                  </div>
-                </dl>
-              </article>
-
-              <article className="card-box">
-                <h3>Progression du Cursus</h3>
-                <ol className="timeline">
-                  {selectedStudent.cursus.map((item, idx) => (
-                    <li
-                      key={item.yearLabel}
-                      className={`${item.state} ${idx === selectedStudent.cursus.length - 1 ? "is-last" : ""}`}
-                    >
-                      <div className="node">{idx + 1}</div>
-                      <div className="timeline-body">
-                        <div className="timeline-title">
-                          <strong>
-                            {item.yearLabel}{" "}
-                            {item.state === "active" && item.passageLabel ? <span>({item.passageLabel})</span> : null}
-                          </strong>
-                        </div>
-                        {item.state !== "pending" && item.passageLabel && item.state !== "active" ? (
-                          <div className="timeline-sub">
-                            <span className="dot" />
-                            <span>{item.passageLabel}</span>
-                          </div>
-                        ) : null}
-                        {typeof item.grade === "number" && item.credits ? (
-                          <div className="timeline-meta">
-                            <span>{item.grade.toFixed(1)} / 20</span>
-                            <span className="sep">•</span>
-                            <span>{item.credits}</span>
-                          </div>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </article>
-
-              <article className="card-box">
-                <h3>Notes &amp; Resultats</h3>
-                {selectedStudent.results.map((result) => (
-                  <div className="note-card" key={result.code}>
-                    <div className="note-top">
-                      <div>
-                        <strong>{result.module}</strong>
-                        <small className="note-code">{result.code}</small>
-                      </div>
-                      <span className="note-check" aria-hidden="true" />
-                    </div>
-                    <div className="note-grades">
-                      <span>Exam: <b>{result.exam}</b></span>
-                      <span>TD: <b>{result.td}</b></span>
-                      <span>TP: <b>{result.tp}</b></span>
-                    </div>
-                    <div className="note-bottom">
-                      <span className="note-avg">Moy: {result.average.toFixed(2)}</span>
-                      <span className={`note-status ${result.status === "Normale" ? "ok" : "warn"}`}>{result.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </article>
-            </section>
-
-            <section className="attendance-panel">
-              <div className="attendance-head">
-                <h3>Suivi des Presences</h3>
-                <span>Taux: {selectedStudent.attendanceRate}%</span>
-              </div>
-              <div className="attendance-stats">
-                <article className="stat-present"><small>Present</small><strong>{selectedStudent.attendance.present}</strong></article>
-                <article className="stat-absent"><small>Absent</small><strong>{selectedStudent.attendance.absent}</strong></article>
-                <article className="stat-late"><small>Retard</small><strong>{selectedStudent.attendance.late}</strong></article>
-                <article className="stat-justified"><small>Justifie</small><strong>{selectedStudent.attendance.justified}</strong></article>
-              </div>
-              <div className="attendance-list">
-                {selectedStudent.attendanceHistory.map((item) => (
-                  <div className="attendance-row" key={`${item.module}-${item.date}`}>
-                    <div>
-                      <strong>{item.module}</strong>
-                      <small>{item.code} - {item.type}</small>
-                    </div>
-                    <div className="attendance-meta">
-                      <small>{item.date}</small>
-                      <span className={`presence ${item.status.toLowerCase()}`}>{item.status}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
+          <StudentDetailsSection selectedStudent={selectedStudent} setSelectedStudentId={setSelectedStudentId} />
         )}
 
-        {isCreateOpen ? (
-          <div className="modal-overlay" role="dialog" aria-modal="true">
-            <div className="modal">
-              <div className="modal-head">
-                <div>
-                  <h2>Nouvel etudiant</h2>
-                  <p>Ajouter un etudiant dans la liste</p>
-                </div>
-                <button className="icon-btn" onClick={() => setIsCreateOpen(false)} aria-label="Fermer">
-                  <X size={16} />
-                </button>
-              </div>
-
-              {createError ? <div className="form-error">{createError}</div> : null}
-
-              <div className="form-grid">
-                <label>
-                  <span>Nom</span>
-                  <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-                </label>
-                <label>
-                  <span>Email</span>
-                  <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
-                </label>
-                <label>
-                  <span>Matricule</span>
-                  <input value="Auto" disabled />
-                </label>
-                <label>
-                  <span>Departement</span>
-                  <select
-                    value={form.department}
-                    onChange={(e) => setForm((p) => ({ ...p, department: e.target.value as Student["department"] }))}
-                  >
-                    <option>Informatique</option>
-                    <option>Physique</option>
-                    <option>Mathematiques</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Annee</span>
-                  <select value={form.year} onChange={(e) => setForm((p) => ({ ...p, year: e.target.value }))}>
-                    <option value="1ere">1ere</option>
-                    <option value="2eme">2eme</option>
-                    <option value="3eme">3eme</option>
-                    <option value="4eme">4eme</option>
-                    <option value="5eme">5eme</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Moyenne</span>
-                  <input value={form.average} onChange={(e) => setForm((p) => ({ ...p, average: e.target.value }))} />
-                </label>
-                <label>
-                  <span>Statut</span>
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as Student["status"] }))}
-                  >
-                    <option>Actif</option>
-                    <option>Diplome</option>
-                    <option>Soutenance</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Telephone</span>
-                  <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
-                </label>
-                <label>
-                  <span>Ville / Adresse</span>
-                  <input value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} />
-                </label>
-                <label>
-                  <span>Date de naissance</span>
-                  <input value={form.birthDate} onChange={(e) => setForm((p) => ({ ...p, birthDate: e.target.value }))} />
-                </label>
-                <label>
-                  <span>Formation</span>
-                  <select
-                    value={form.formation}
-                    onChange={(e) => setForm((p) => ({ ...p, formation: e.target.value }))}
-                  >
-                    <option value="" disabled>
-                      Choisir une formation...
-                    </option>
-                    {formationOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Date inscription</span>
-                  <input value={new Date().toLocaleDateString("fr-FR")} disabled />
-                </label>
-              </div>
-
-              <div className="modal-actions">
-                <button className="ghost-btn" onClick={() => setIsCreateOpen(false)}>Annuler</button>
-                <button className="primary-btn" onClick={createStudent}>Ajouter</button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <CreateStudentModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          createError={createError}
+          form={form}
+          setForm={setForm}
+          formationOptions={formationOptions}
+          createStudent={createStudent}
+        />
       </main>
     </div>
   );
